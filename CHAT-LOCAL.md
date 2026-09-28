@@ -86,7 +86,8 @@ Ollama produit la réponse ; le serveur gère la conversation ; le navigateur fo
 | `web/index.html` | Structure du chat |
 | `web/style.css` | Présentation ordinateur et mobile |
 | `web/app.js` | Envoi, progression, historique et nouveau fil |
-| `agent.py` | Outils et boucle de l'agent |
+| `agent.py` | Boucle de l'agent et adaptateur Ollama |
+| `skills.py` | Consignes, outils disponibles et contrôles d'accès |
 | `conversations/` | Vos conversations sauvegardées |
 
 Les tests se relancent avec `python -m unittest -v tests tests_chat`, en utilisant le Python disponible sur votre ordinateur.

@@ -77,6 +77,10 @@ Programme Python : contexte, boucle et permissions
 
 Le modèle propose des appels d'outils ; Python valide leurs paramètres et exécute les lectures. Le chat ajoute la gestion de conversations autour de la même boucle.
 
+## Modifier les capacités
+
+Les capacités se modifient dans `skills.py` : `MISSION` définit les consignes, `OUTILS` décrit les fonctions accessibles au modèle et `executer_outil` contrôle puis réalise les actions. La boucle et la connexion à Ollama restent dans `agent.py`. Ici, « skills » désigne les capacités de cette application ; ce fichier n'est pas un plugin Codex `SKILL.md`.
+
 ## Tests
 
 ```sh
@@ -89,7 +93,8 @@ Les tests automatisés n'appellent pas de modèle réel. Ils vérifient notammen
 
 | Fichier ou dossier | Rôle |
 |---|---|
-| `agent.py` | Moteur, outils et adaptateur Ollama |
+| `agent.py` | Boucle d'exécution et adaptateur Ollama |
+| `skills.py` | Consignes, catalogue des outils, exécution et contrôles d'accès |
 | `chat_local.py` | Serveur local et conversations |
 | `web/` | Interface du chat |
 | `documents/` | Données fictives |

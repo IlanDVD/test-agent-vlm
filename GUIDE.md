@@ -58,7 +58,7 @@ Un chatbot sans outils produit du texte. Un workflow suit un chemin décidé par
 
 ## 3. Lire le code dans le bon ordre
 
-Commencez par `OUTILS` : c'est le menu proposé au modèle. Lisez ensuite `executer_outil` pour voir les actions réellement permises. Puis regardez `lancer`, le cœur du système :
+Commencez par `skills.py` : ce fichier regroupe les consignes (`MISSION`), le menu proposé au modèle (`OUTILS`) et l'exécution avec ses contrôles (`executer_outil`). Puis regardez `lancer` dans `agent.py`, le cœur du système :
 
 ```python
 reponse = decider(messages)

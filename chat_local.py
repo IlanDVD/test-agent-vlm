@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import agent
+from skills import executer_outil
 
 BASE = Path(__file__).resolve().parent
 IDENTITE = "mon-premier-agent-chat-v1"
@@ -162,7 +163,7 @@ class Requetes(BaseHTTPRequestHandler):
         if self.path == "/api/bootstrap":
             return self.repondre(200, {"token": app.token, "modele": app.modele,
                                       "etat": app.etat_ollama(),
-                                      "documents": agent.executer_outil("lister_documents", {}, BASE / "documents").get("documents", [])})
+                                      "documents": executer_outil("lister_documents", {}, BASE / "documents").get("documents", [])})
         if self.path.startswith("/api/session/"):
             try:
                 return self.repondre(200, app.instantane(self.path.removeprefix("/api/session/")))
