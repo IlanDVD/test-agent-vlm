@@ -1,0 +1,48 @@
+{
+  "mode": "demo",
+  "modele": null,
+  "question": "Quels sont le délai et les frais de livraison en France métropolitaine ?",
+  "evenements": [
+    {
+      "type": "outil",
+      "tour": 1,
+      "nom": "lister_documents",
+      "arguments": {},
+      "resultat": {
+        "documents": [
+          "livraison.txt",
+          "produits.txt",
+          "retours.txt"
+        ]
+      }
+    },
+    {
+      "type": "outil",
+      "tour": 2,
+      "nom": "lire_document",
+      "arguments": {
+        "nom": "document-inexistant.txt"
+      },
+      "resultat": {
+        "erreur": "Document introuvable : document-inexistant.txt."
+      }
+    },
+    {
+      "type": "outil",
+      "tour": 3,
+      "nom": "lire_document",
+      "arguments": {
+        "nom": "livraison.txt"
+      },
+      "resultat": {
+        "source": "livraison.txt",
+        "contenu": "BOUTIQUE FICTIVE — données créées pour apprendre, sans valeur commerciale.\nZone : France métropolitaine.\nDélai estimé : 3 à 5 jours ouvrés après expédition. Ce n'est pas une date garantie.\nFrais de livraison : 4,90 EUR ; offerts à partir de 50 EUR d'achat.\nLe délai de préparation avant expédition n'est pas renseigné.\n"
+      }
+    },
+    {
+      "type": "reponse_finale",
+      "tour": 4,
+      "texte": "Voici les informations du document fictif [livraison.txt] :\n\nBOUTIQUE FICTIVE — données créées pour apprendre, sans valeur commerciale.\nZone : France métropolitaine.\nDélai estimé : 3 à 5 jours ouvrés après expédition. Ce n'est pas une date garantie.\nFrais de livraison : 4,90 EUR ; offerts à partir de 50 EUR d'achat.\nLe délai de préparation avant expédition n'est pas renseigné.\n"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+# Données personnelles générées à l'exécution
+/conversations/
+/journaux/
+
+# Python et environnements locaux
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Identifiants et configuration locale
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Fichiers temporaires et outils
+*.log
+*.tmp
+*.zip
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

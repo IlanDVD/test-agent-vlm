@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mon agent — Chat local</title>
+<meta name="description" content="Votre assistant documentaire local, avec ses sources et ses étapes de travail.">
+<link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/style.css">
+<script src="/app.js" defer></script>
+</head>
+<body>
+<aside class="sidebar">
+  <a class="brand" href="/" aria-label="Accueil du chat"><span class="brand-mark">a.</span><span>Mon agent<small>ATELIER LOCAL</small></span></a>
+  <button id="nouveau" class="new-chat" disabled><span aria-hidden="true">＋</span> Nouvelle conversation</button>
+  <section class="sources"><h2>Ses documents</h2><ul id="documents"></ul><p>La boutique et ses données sont fictives.</p></section>
+  <div class="local-note"><span class="local-symbol" aria-hidden="true">⌂</span><div>Sur votre ordinateur<small>Conversations enregistrées localement</small></div></div>
+</aside>
+<main>
+  <header><div><h1>Conversation</h1><p id="modele">Connexion à votre agent…</p></div><span id="connexion" class="connection">Vérification…</span></header>
+  <div id="alerte" class="alert" role="alert" hidden></div>
+  <section id="fil" class="thread" aria-label="Messages de la conversation">
+    <div id="bienvenue" class="welcome"><span class="eyebrow">VOTRE ASSISTANT DOCUMENTAIRE</span><h2>Une question ?<br>Parlons-en.</h2><p>Prix, livraison, retours : votre agent consulte ses documents et vous répond avec ses sources.</p>
+      <div class="suggestions"><button data-question="Combien coûtent 4 stylos noirs et un carnet bleu, livraison comprise ?">Calculer un panier <span aria-hidden="true">↗</span></button><button data-question="Quel est le délai de livraison en France métropolitaine ?">Comprendre la livraison <span aria-hidden="true">↗</span></button><button data-question="Puis-je retourner un carnet bleu ?">Consulter les retours <span aria-hidden="true">↗</span></button></div>
+    </div>
+    <div id="messages"></div>
+  </section>
+  <footer><form id="composer"><label class="sr-only" for="question">Votre message</label><textarea id="question" rows="2" maxlength="4000" placeholder="Écrivez à votre agent…" disabled></textarea><div class="compose-bottom"><span>Entrée pour envoyer · Maj + Entrée pour une ligne</span><button type="submit" id="envoyer" disabled>Envoyer <span aria-hidden="true">↑</span></button></div></form><p class="footnote">Les 8 derniers échanges réussis servent de contexte. Les réponses peuvent contenir des erreurs.</p></footer>
+</main>
+<div class="sr-only" id="annonce" role="status" aria-live="polite"></div>
+</body>
+</html>
