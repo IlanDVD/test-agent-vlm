@@ -1,6 +1,6 @@
 """Un agent pédagogique : simulation sans IA, ou vraie IA via Ollama local.
 
-Python 3.10+ ; aucune bibliothèque externe. Voir GUIDE.md.
+Python 3.10+ ; Pillow requis pour les annotations de plans. Voir GUIDE.md.
 """
 import argparse
 import json

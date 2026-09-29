@@ -1,5 +1,6 @@
-"""Chat local, bibliothèque standard uniquement. Lancer avec LANCER-CHAT.cmd."""
+"""Chat local ; Pillow requis pour les annotations de plans. Lancer avec LANCER-CHAT.cmd."""
 import argparse
+import re
 import json
 import secrets
 import threading
@@ -167,6 +168,14 @@ class Requetes(BaseHTTPRequestHandler):
             return self.repondre(200, {"token": app.token, "modele": app.modele,
                                       "modele_vision": app.modele_vision, "etat": app.etat_ollama(),
                                       "documents": executer_outil("lister_documents", {}, BASE / "documents").get("documents", [])})
+        if self.path.startswith("/annotations/"):
+            nom = self.path.removeprefix("/annotations/")
+            racine = (BASE / "annotations").resolve()
+            chemin = (racine / nom).resolve()
+            if (not re.fullmatch(r"[0-9a-f]{32}\.(png|json)", nom) or
+                    racine.parent != BASE.resolve() or chemin.parent != racine or not chemin.is_file()):
+                return self.repondre(404, {"erreur": "Annotation introuvable."})
+            return self.repondre(200, chemin.read_bytes(), "image/png" if nom.endswith(".png") else "application/json; charset=utf-8")
         if self.path.startswith("/api/session/"):
             try:
                 return self.repondre(200, app.instantane(self.path.removeprefix("/api/session/")))

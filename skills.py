@@ -20,10 +20,17 @@ inventer de remise. L'absence d'un tarif de lot n'empêche pas ce calcul.
 Utilise l'historique pour comprendre les références comme « deux exemplaires ».
 Pour une image PNG ou JPEG, utilise analyser_image avec une question précise.
 Cite sa source et signale les éléments illisibles sans les inventer.
-Tu peux uniquement lister, lire et analyser les documents. Tu ne peux ni commander ni écrire.
+Pour repérer ou encadrer les pictogrammes selon une légende, utilise reperer_pictogrammes.
+Cet outil crée une copie annotée et donne les labels et quantités estimées.
+Ne présente jamais ces estimations comme un stock réel vérifié.
+Tu peux créer ces annotations, mais ni modifier les documents sources ni commander.
 Quand tu as les informations nécessaires, réponds sans appeler d'outil.
 """
 OUTILS = [
+    {"type": "function", "function": {"name": "reperer_pictogrammes",
+     "description": "Lit la légende d’un plan, localise les pictogrammes associés et crée une image avec cadres et labels. Retourne des quantités estimées à vérifier.",
+     "parameters": {"type": "object", "properties": {"nom": {"type": "string"}},
+                    "required": ["nom"], "additionalProperties": False}}},
     {"type": "function", "function": {"name": "analyser_image",
      "description": "Consulte une image PNG/JPEG du dossier documents avec un modèle visuel. Retourne une interprétation qui peut comporter des erreurs.",
      "parameters": {"type": "object", "properties": {"nom": {"type": "string"}, "question": {"type": "string"}},
@@ -58,6 +65,11 @@ def executer_outil(nom, arguments, dossier, modele_vision="qwen2.5vl:3b"):
             if len(fichiers) > 50:
                 raise ValueError("Dossier trop grand pour cette démonstration (50 fichiers maximum).")
             return {"documents": fichiers}
+        if nom == "reperer_pictogrammes":
+            if set(arguments) != {"nom"}:
+                raise ValueError("Paramètre attendu : nom.")
+            from reperage import reperer_pictogrammes
+            return reperer_pictogrammes(racine, arguments["nom"], modele_vision)
         if nom == "analyser_image":
             if set(arguments) != {"nom", "question"}:
                 raise ValueError("Paramètres attendus : nom et question.")

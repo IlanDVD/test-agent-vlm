@@ -27,6 +27,7 @@ function richText(target, text) {
 }
 function actionLabel(event) {
   if(event.nom==='lister_documents')return 'Liste des documents';
+  if(event.nom==='reperer_pictogrammes')return 'Repérage des pictogrammes de '+(event.arguments?.nom || 'plan');
   if(event.nom==='analyser_image')return 'Analyse visuelle de '+(event.arguments?.nom || 'image');
   if(event.nom==='lire_document')return 'Lecture de '+(event.arguments?.nom || 'document');
   return event.nom || 'Action';
@@ -45,10 +46,22 @@ function render(data) {
       const label=el('div','assistant-label');label.append(el('span','avatar','a.'),el('span','','Mon agent'));node.append(label);
       node.answer=el('div','answer');node.progress=el('div','progress');node.progress.append(el('span','spinner'),el('span'));
       node.steps=el('details');node.summary=el('summary');node.list=el('ol');node.steps.append(node.summary,node.list);
-      node.append(node.progress,node.answer,node.steps);$('messages').append(node);nodes.set(turn.id,node);
+      node.annotations=el('div','annotations');
+      node.append(node.progress,node.answer,node.annotations,node.steps);$('messages').append(node);nodes.set(turn.id,node);
     }
     const events=turn.evenements || [], tools=events.filter(e=>e.type==='outil');
     node.list.replaceChildren();
+    const annotations=tools.map(e=>e.resultat).filter(r=>r && /^[0-9a-f]{32}\.png$/.test(r.annotation));
+    const cle=JSON.stringify(annotations.map(r=>r.annotation));
+    if(node.annotations.dataset.cle!==cle){
+      node.annotations.dataset.cle=cle;node.annotations.replaceChildren();
+      annotations.forEach(r=>{
+        const figure=el('figure');const lien=el('a');lien.href='/annotations/'+r.annotation;lien.target='_blank';lien.rel='noopener';
+        const img=el('img');img.src=lien.href;img.alt='Pictogrammes encadrés — '+r.source;lien.append(img);
+        const rapport=el('a','','Consulter les coordonnées et la légende (JSON)');rapport.href=lien.href.replace(/\.png$/,'.json');rapport.target='_blank';rapport.rel='noopener';
+        figure.append(lien,el('figcaption','',r.avertissement),rapport);node.annotations.append(figure);
+      });
+    }
     tools.forEach(e=>{
       const error=e.resultat?.erreur;
       let label=actionLabel(e)+(error?' — '+error:' — terminé');

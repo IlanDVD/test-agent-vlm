@@ -1,0 +1,2 @@
+# Nécessaire uniquement au repérage et aux annotations
+Pillow>=12.1,<13

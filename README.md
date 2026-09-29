@@ -115,3 +115,7 @@ Pour aller plus loin, consultez le [guide pédagogique](GUIDE.md) et le [guide d
 ## Images et VLM
 
 Voir [VISION.md](VISION.md) pour analyser les images PNG/JPEG avec Ollama, configurer le modèle visuel et tester la facture fournie.
+
+## Repérage des pictogrammes
+
+Voir [REPERAGE.md](REPERAGE.md) pour lire une légende et obtenir un plan annoté. Cette fonction utilise Pillow : python -m pip install -r requirements.txt.
