@@ -119,3 +119,9 @@ Voir [VISION.md](VISION.md) pour analyser les images PNG/JPEG avec Ollama, confi
 ## Repérage des pictogrammes
 
 Voir [REPERAGE.md](REPERAGE.md) pour lire une légende et obtenir un plan annoté. Cette fonction utilise Pillow : python -m pip install -r requirements.txt.
+
+## Découverte des documents
+
+L'outil lister_documents parcourt documents à chaque appel : aucune liste de noms n'est codée en dur. Les formats pris en charge sont TXT, CSV, PNG et JPEG. lire_document lit les TXT/CSV UTF-8 (12 000 octets maximum) ; les images utilisent les outils visuels. Un nouveau CSV est découvert sans modification du code. La liste latérale du chat se recharge à l'actualisation de la page. Après une modification du code Python, redémarrer le serveur.
+
+Les quantités du CSV décrivent l'inventaire déclaré ; celles de la légende du plan restent théoriques. Aucun accès au stock en temps réel n'est ajouté.

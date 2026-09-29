@@ -27,6 +27,7 @@ class Application:
         self.dossier.mkdir(exist_ok=True, parents=True)
         self.modele_vision = modele_vision
         self.modele = modele
+        self.planifier = None if decider is not None else (lambda q, h, d: agent.planifier_demande(q, h, d, modele))
         self.decider = decider or (lambda messages: agent.modele_ollama(messages, modele))
         self.token = secrets.token_urlsafe(32)
         self.sessions = {}
@@ -96,7 +97,7 @@ class Application:
                 self.sauver(session)
         try:
             trace = agent.lancer(self.decider, tour["question"], BASE / "documents",
-                                 historique=historique, on_event=evenement, bavard=False, modele_vision=self.modele_vision)
+                                 historique=historique, on_event=evenement, bavard=False, modele_vision=self.modele_vision, planifier=self.planifier)
             with self.lock:
                 if trace and trace[-1]["type"] == "reponse_finale":
                     tour.update(statut="termine", reponse=trace[-1]["texte"])

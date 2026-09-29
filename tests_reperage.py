@@ -47,7 +47,7 @@ class TestsReperage(unittest.TestCase):
             with patch('reperage.appeler_vision', return_value=json.dumps(self.resultat())), patch('reperage.candidats_colores', return_value=[{'id':1, 'bbox':[10,20,40,50], 'couleur':[10,150,230]}, {'id':2, 'bbox':[150,100,200,200], 'couleur':[10,150,230]}]):
                 resultat = reperer_pictogrammes(documents, 'plan.png')
             self.assertEqual(chemin.read_bytes(), original)
-            self.assertEqual(resultat['legende'][0]['quantite_estimee'], 10)
+            self.assertEqual(resultat['legende'][0]['quantite_theorique'], 10)
             fichier = Path(tmp) / 'annotations' / resultat['annotation']
             self.assertTrue(fichier.is_file())
             self.assertTrue(fichier.with_suffix('.json').is_file())
@@ -59,6 +59,25 @@ class TestsReperage(unittest.TestCase):
         r['legende'] = []
         with self.assertRaises(ValueError):
             valider(r, 200, 200)
+
+    def test_annotation_avec_stock_joint_par_identifiant(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            documents = Path(tmp) / 'documents'
+            documents.mkdir()
+            Image.new('RGB', (200, 200), 'white').save(documents / 'plan.png')
+            (documents / 'stock-reel.csv').write_text('numero,quantite,type_objet\nN7,7,Carnets\n', encoding='utf-8')
+            candidats = [{'id': 1, 'bbox': [10, 30, 40, 70], 'couleur': [10, 150, 230]},
+                         {'id': 2, 'bbox': [150, 100, 190, 140], 'couleur': [10, 150, 230]}]
+            lectures = [json.dumps(self.resultat()), json.dumps({'reperes': [{'candidat': 'P1', 'repere': 'N7'}]})]
+            with patch('reperage.appeler_vision', side_effect=lectures), patch('reperage.candidats_colores', return_value=candidats):
+                resultat = reperer_pictogrammes(documents, 'plan.png')
+            element = resultat['elements'][0]
+            self.assertEqual(element['repere'], 'N7')
+            self.assertEqual(element['taux_remplissage'], 70)
+            self.assertEqual(element['bbox'], [10, 30, 40, 70])
+            self.assertEqual(resultat['source_stock'], 'stock-reel.csv')
+            rapport = Path(tmp) / 'annotations' / resultat['annotation'].replace('.png', '.json')
+            self.assertEqual(json.loads(rapport.read_text(encoding='utf-8'))['elements'][0]['quantite_reelle'], 7)
 
     def test_detection_coloree_sans_coordonnees_codees(self):
         from PIL import ImageDraw

@@ -29,8 +29,10 @@ sont exclus de Git ; leur suppression manuelle rendra les anciens liens inaccess
    cadres. Python multiplie les nombres de pictogrammes par les quantités lues.
 6. Le serveur affiche l'image et expose le rapport JSON avec les correspondances.
 
-Les identifiants P sont produits par l'algorithme : ils ne transcrivent pas les
-repères N1/S1 déjà imprimés sur le plan. Les couleurs, positions et quantités
+Les identifiants P sont des repères internes. Lorsqu'un CSV de stock est fourni,
+un second appel VLM transcrit les identifiants N1/S1 imprimés à côté des pictogrammes
+dans une planche de recadrages. La boîte du pictogramme reste indépendante de cette
+zone de lecture plus large. Les couleurs, positions et quantités
 attendues de notre exemple ne sont pas codées en dur.
 
 Une boîte `[x_min, y_min, x_max, y_max]` est exprimée en pixels, origine en haut
@@ -64,3 +66,35 @@ les totaux. Les plans sans légende exploitable produisent une erreur explicite.
 Tests : `python -m unittest -v tests tests_chat tests_vision tests_reperage`.
 
 Référence : https://docs.ollama.com/capabilities/structured-outputs
+
+## Taux de remplissage depuis le CSV
+
+`reperer_pictogrammes` accepte `fichier_stock` (facultatif). Si ce paramètre est
+omis, `stock-reel.csv` est utilisé automatiquement lorsqu'il existe dans documents.
+L'outil effectue lui-même la lecture du CSV : le modèle principal ne fournit pas
+les quantités ni les pourcentages. Le CSV doit contenir numero,quantite,type_objet.
+
+Pour chaque pictogramme, le VLM transcrit le repère imprimé dans un recadrage
+agrandi. Python joint ce repère à la ligne du CSV, vérifie le type de produit,
+puis calcule quantité / capacité de la légende × 100 (arrondi à une décimale).
+Le nom et le taux apparaissent au-dessus de la boîte, qui contient uniquement
+le pictogramme. Les exemples de légende sont exclus. Le rapport JSON conserve
+les repères internes P, les identifiants lus, les quantités, capacités et taux.
+Les totaux `quantite_theorique` sont explicitement séparés des quantités réelles.
+
+Un identifiant absent, illisible ou dupliqué, un type incompatible ou une capacité
+inconnue donne « indisponible », jamais une quantité inventée. Un taux supérieur
+à 100 % n'est pas plafonné et est signalé dans le rapport. Le VLM peut encore mal
+lire un identifiant ou une capacité : les calculs sont déterministes, la lecture
+visuelle reste à vérifier. Cette version suppose les identifiants placés à droite
+des icônes, comme sur notre plan ; une autre disposition nécessite d'adapter les recadrages.
+
+Exemple : « Encadre les caisses et les piles sur plan-stocks-entrepot.png et affiche
+leur taux de remplissage à partir de stock-reel.csv. »
+Résultat vérifié sur le plan fourni : N7 = 7/10 = 70 %, S3 = 1/25 = 4 %.
+
+## Demandes en langage naturel
+
+Le chat et le mode Ollama identifient d'abord l'objectif avec une réponse structurée du LLM : demande d'image, fichier du plan et CSV à utiliser. Aucun test de phrase exacte ni liste de mots-clés ne déclenche le parcours. Pour une annotation, le code exécute ensuite le parcours métier complet et exige un PNG existant avant de répondre. La réponse finale de ce parcours décrit les résultats vérifiés, sans demander au modèle de réinventer les calculs. Les autres questions conservent la boucle d'outils générale. Une ambiguïté sur le fichier donne une demande de précision.
+
+La compréhension reste probabiliste ; le contrat d'exécution évite qu'un objectif d'annotation correctement identifié se termine par un simple inventaire textuel. Ce parcours produit le plan complet avec les taux disponibles ; il ne constitue pas un moteur universel d'édition d'images.

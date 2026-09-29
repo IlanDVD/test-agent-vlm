@@ -144,11 +144,15 @@ def valider(resultat, largeur, hauteur):
     return region, legende, propres, rejetes
 
 
-def reperer_pictogrammes(dossier, nom, modele="qwen2.5vl:3b"):
+def reperer_pictogrammes(dossier, nom, modele="qwen2.5vl:3b", fichier_stock=None):
     try:
         from PIL import Image, ImageDraw, ImageFont
     except ImportError as erreur:
         raise ValueError("Installez Pillow avec : python -m pip install -r requirements.txt") from erreur
+    from stocks import lire_stock, appliquer_stock
+    if fichier_stock is None and (Path(dossier) / "stock-reel.csv").is_file():
+        fichier_stock = "stock-reel.csv"
+    stock = lire_stock(dossier, fichier_stock) if fichier_stock else None
     contenu = lire_image(dossier, nom)
     with Image.open(io.BytesIO(contenu)) as source:
         if source.width * source.height > 20_000_000:
@@ -180,6 +184,30 @@ def reperer_pictogrammes(dossier, nom, modele="qwen2.5vl:3b"):
     brut = appeler_vision(flux.getvalue(), question, modele, schema=schema, max_tokens=1024)
     resultat = associer(json.loads(brut), candidats)
     region, legende, elements, rejetes = valider(resultat, largeur, hauteur)
+    if stock is not None:
+        # Agrandir les zones de texte adjacentes sans modifier les boîtes des pictogrammes.
+        tuiles = Image.new("RGB", (960, ((len(elements)+3)//4)*170), "white")
+        dessin_tuiles = ImageDraw.Draw(tuiles)
+        for i, element in enumerate(elements):
+            x1, y1, x2, y2 = element["bbox"]
+            extrait = image.crop((max(0,x1-2), max(0,y1-2), min(largeur,x2+100), min(hauteur,y2+3)))
+            extrait.thumbnail((230, 135))
+            tx, ty = (i%4)*240, (i//4)*170
+            tuiles.paste(extrait, (tx, ty+28))
+            dessin_tuiles.text((tx+5, ty+3), element["repere"], fill="black", font=ImageFont.load_default(size=20))
+        flux_tuiles = io.BytesIO()
+        tuiles.save(flux_tuiles, format="PNG")
+        schema_reperes = objet({"reperes": {"type": "array", "items": objet({
+            "candidat": {"type": "string", "enum": [e["repere"] for e in elements]},
+            "repere": {"type": "string"}})}})
+        lecture_reperes = json.loads(appeler_vision(flux_tuiles.getvalue(),
+            "Chaque tuile montre un pictogramme et son identifiant imprimé à droite. "
+            "Le titre P est l'identifiant temporaire du candidat. Pour chaque candidat, transcris "
+            "EXACTEMENT l'identifiant noir visible à droite (exemple N7 ou S3). "
+            "Ne déduis aucun numéro depuis l'ordre des tuiles. Si illisible, repere doit être vide. "
+            "Renvoie tous les candidats une seule fois. Schéma : " + json.dumps(schema_reperes),
+            modele, schema=schema_reperes, max_tokens=2048))
+        appliquer_stock(elements, legende, lecture_reperes.get("reperes", []), stock)
     palette = ["#0072B2", "#D55E00", "#009E73", "#CC79A7", "#6A3D9A", "#7A5900"]
     couleurs = {e["label"]: palette[i % len(palette)] for i, e in enumerate(legende)}
     dessin = ImageDraw.Draw(image)
@@ -188,7 +216,12 @@ def reperer_pictogrammes(dossier, nom, modele="qwen2.5vl:3b"):
         x1, y1, x2, y2 = e["bbox"]
         couleur = couleurs[e["label"]]
         dessin.rectangle(e["bbox"], outline=couleur, width=4)
-        texte = (e["repere"] + " · " if e["repere"] else "") + e["label"]
+        if stock is not None:
+            taux = e["taux_remplissage"]
+            pourcentage = "indisponible" if taux is None else f"{taux:g} %"
+            texte = (e["repere"] or e["candidat"]) + " : " + pourcentage
+        else:
+            texte = (e["repere"] + " · " if e["repere"] else "") + e["label"]
         limites = dessin.textbbox((0, 0), texte, font=police)
         w, h = limites[2]+8, limites[3]+6
         x, y = min(x1, max(0, largeur-w)), max(0, y1-h)
@@ -196,7 +229,7 @@ def reperer_pictogrammes(dossier, nom, modele="qwen2.5vl:3b"):
         dessin.text((x+4, y+1), texte, fill=couleur, font=police)
     bilan = [{**e, "pictogrammes": sum(x["label"] == e["label"] for x in elements)} for e in legende]
     for e in bilan:
-        e["quantite_estimee"] = None if e["quantite_par_symbole"] is None else e["pictogrammes"] * e["quantite_par_symbole"]
+        e["quantite_theorique"] = None if e["quantite_par_symbole"] is None else e["pictogrammes"] * e["quantite_par_symbole"]
     racine = Path(dossier).resolve().parent
     sortie = racine / "annotations"
     sortie.mkdir(exist_ok=True)
@@ -207,9 +240,10 @@ def reperer_pictogrammes(dossier, nom, modele="qwen2.5vl:3b"):
     image.save(sortie / fichier)
     rapport = {"source": nom, "modele": modele, "dimensions": [largeur, hauteur],
         "legende_bbox": region, "legende": bilan, "elements": elements,
-        "methode": "VLM pour la légende ; composantes colorées et correspondance de couleur pour les positions",
+        "source_stock": fichier_stock,
+        "methode": "VLM pour la légende et les identifiants ; couleurs pour les positions ; calcul des taux en Python à partir du CSV",
         "candidats_non_classes": resultat.get("candidats_non_classes", 0),
         "elements_exclus": rejetes, "incertitudes": str(resultat.get("incertitudes", ""))[:2000],
-        "annotation": fichier, "avertissement": "Repérage automatique expérimental : vérifier les cadres et les oublis. Les quantités sont des estimations issues du plan, pas un stock en temps réel."}
+        "annotation": fichier, "avertissement": ("Taux calculés depuis le CSV et les capacités lues sur le plan. Vérifier les identifiants et la légende ; aucun stock en temps réel." if stock is not None else "Repérage automatique expérimental : vérifier les cadres et les oublis. Les quantités sont théoriques, pas un stock en temps réel.")}
     (sortie / (identifiant + ".json")).write_text(json.dumps(rapport, ensure_ascii=False, indent=2), encoding="utf-8")
     return rapport

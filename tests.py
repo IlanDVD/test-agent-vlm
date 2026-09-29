@@ -58,6 +58,24 @@ class TestsAgent(unittest.TestCase):
         (self.dossier / "grand.txt").write_text("x" * 12001, encoding="utf-8")
         self.assertIn("erreur", agent.executer_outil("lire_document", {"nom": "grand.txt"}, self.dossier))
 
+    def test_decouverte_dynamique_et_lecture_csv(self):
+        nom = "inventaire.CSV"
+        contenu = "numero,quantite,type_objet\nN7,7,carnet bleu\nS3,1,stylo noir\n"
+        self.assertNotIn(nom, agent.executer_outil("lister_documents", {}, self.dossier)["documents"])
+        (self.dossier / nom).write_bytes(contenu.encode("utf-8-sig"))
+        self.assertIn(nom, agent.executer_outil("lister_documents", {}, self.dossier)["documents"])
+        self.assertEqual(agent.executer_outil("lire_document", {"nom": nom}, self.dossier),
+                         {"source": nom, "contenu": contenu})
+        (self.dossier / nom).write_text("numero,quantite\nN7,2\n", encoding="utf-8")
+        self.assertIn("N7,2", agent.executer_outil("lire_document", {"nom": nom}, self.dossier)["contenu"])
+
+    def test_csv_hors_dossier_et_formats_non_pris_en_charge(self):
+        (Path(self.temp.name) / "secret.csv").write_text("secret", encoding="utf-8")
+        (self.dossier / "programme.exe").write_bytes(b"test")
+        self.assertIn("erreur", agent.executer_outil("lire_document", {"nom": "../secret.csv"}, self.dossier))
+        self.assertNotIn("programme.exe", agent.executer_outil("lister_documents", {}, self.dossier)["documents"])
+        self.assertIn("erreur", agent.executer_outil("lire_document", {"nom": "programme.exe"}, self.dossier))
+
     def test_observations_reviennent_au_decideur(self):
         def decider(messages):
             if messages[-1]["role"] == "user":
@@ -70,6 +88,36 @@ class TestsAgent(unittest.TestCase):
     def test_reponse_vide_signalee(self):
         trace = self.lancer(lambda m: {"role": "assistant", "content": ""})
         self.assertEqual(trace[-1]["type"], "erreur")
+
+    def test_appel_json_textuel_execute_et_observation_reinjectee(self):
+        def decider(messages):
+            if messages[-1]['role'] == 'user':
+                return {'role': 'assistant', 'content': json.dumps({'name': 'lire_document', 'arguments': {'nom': 'livraison.txt'}})}
+            self.assertEqual(messages[-1]['role'], 'tool')
+            self.assertIn('8 jours', messages[-1]['content'])
+            self.assertEqual(messages[-2]['content'], '')
+            self.assertEqual(messages[-2]['tool_calls'][0]['function']['name'], 'lire_document')
+            return {'role': 'assistant', 'content': 'Document lu.'}
+        trace = self.lancer(decider)
+        self.assertEqual([e['type'] for e in trace], ['appel_recupere', 'outil', 'reponse_finale'])
+
+    def test_recuperation_stricte_sans_extraction_de_prose(self):
+        texte = json.dumps({'name': 'lister_documents', 'arguments': {}})
+        for contenu in [texte, '```json\n' + texte + '\n```']:
+            self.assertTrue(agent.recuperer_appel_textuel({'content': contenu})[1])
+        for contenu in ['Exemple : ' + texte, json.dumps({'name': 'terminal', 'arguments': {}}),
+                        '{"name":"lister_documents",', '{"resultat":42}']:
+            self.assertFalse(agent.recuperer_appel_textuel({'content': contenu})[1])
+        natif = agent.appel('lister_documents')
+        natif['content'] = texte
+        self.assertFalse(agent.recuperer_appel_textuel(natif)[1])
+
+    def test_json_textuel_tronque_pas_execute(self):
+        reponse = {'role': 'assistant', 'content': json.dumps({'name': 'lister_documents', 'arguments': {}}),
+                   '_diagnostic': {'done_reason': 'length'}}
+        trace = self.lancer(lambda m: reponse)
+        self.assertEqual(trace[-1]['type'], 'erreur')
+        self.assertNotIn('outil', [e['type'] for e in trace])
 
     def test_adaptateur_ollama_avec_transport_simule(self):
         class ClientSimule:
