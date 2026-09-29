@@ -21,9 +21,10 @@ def maintenant():
 
 
 class Application:
-    def __init__(self, dossier=BASE / "conversations", modele="qwen3:4b", decider=None):
+    def __init__(self, dossier=BASE / "conversations", modele="qwen3:4b", decider=None, modele_vision="qwen2.5vl:3b"):
         self.dossier = Path(dossier)
         self.dossier.mkdir(exist_ok=True, parents=True)
+        self.modele_vision = modele_vision
         self.modele = modele
         self.decider = decider or (lambda messages: agent.modele_ollama(messages, modele))
         self.token = secrets.token_urlsafe(32)
@@ -94,7 +95,7 @@ class Application:
                 self.sauver(session)
         try:
             trace = agent.lancer(self.decider, tour["question"], BASE / "documents",
-                                 historique=historique, on_event=evenement, bavard=False)
+                                 historique=historique, on_event=evenement, bavard=False, modele_vision=self.modele_vision)
             with self.lock:
                 if trace and trace[-1]["type"] == "reponse_finale":
                     tour.update(statut="termine", reponse=trace[-1]["texte"])
@@ -117,6 +118,8 @@ class Application:
             client = urllib.request.build_opener(urllib.request.ProxyHandler({}))
             with client.open("http://127.0.0.1:11434/api/tags", timeout=3) as reponse:
                 modeles = [m["name"] for m in json.load(reponse).get("models", [])]
+            if self.modele in modeles and self.modele_vision not in modeles:
+                return {"ok": True, "message": f"Chat prêt. Vision absente : ollama pull {self.modele_vision}", "vision_absente": True}
             disponible = self.modele in modeles
             return {"ok": disponible, "message": "Prêt à discuter" if disponible else
                     f"Modèle absent. Dans PowerShell : ollama pull {self.modele}"}
@@ -162,7 +165,7 @@ class Requetes(BaseHTTPRequestHandler):
             return self.repondre(200, {"application": IDENTITE})
         if self.path == "/api/bootstrap":
             return self.repondre(200, {"token": app.token, "modele": app.modele,
-                                      "etat": app.etat_ollama(),
+                                      "modele_vision": app.modele_vision, "etat": app.etat_ollama(),
                                       "documents": executer_outil("lister_documents", {}, BASE / "documents").get("documents", [])})
         if self.path.startswith("/api/session/"):
             try:
@@ -210,10 +213,11 @@ def main():
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--model", default="qwen3:4b")
     parser.add_argument("--ouvrir", action="store_true")
+    parser.add_argument("--vision-model", default="qwen2.5vl:3b")
     args = parser.parse_args()
     url = f"http://127.0.0.1:{args.port}"
     try:
-        serveur = Serveur(("127.0.0.1", args.port), Application(modele=args.model))
+        serveur = Serveur(("127.0.0.1", args.port), Application(modele=args.model, modele_vision=args.vision_model))
     except OSError:
         try:
             client = urllib.request.build_opener(urllib.request.ProxyHandler({}))

@@ -111,3 +111,7 @@ Le serveur écoute uniquement sur `127.0.0.1` et n'est pas destiné à être exp
 Le contexte du chat n'est pas un entraînement du modèle. Le fil est conservé après actualisation dans le même onglet ; cette version ne propose pas de catalogue des anciennes conversations.
 
 Pour aller plus loin, consultez le [guide pédagogique](GUIDE.md) et le [guide du chat](CHAT-LOCAL.md).
+
+## Images et VLM
+
+Voir [VISION.md](VISION.md) pour analyser les images PNG/JPEG avec Ollama, configurer le modèle visuel et tester la facture fournie.

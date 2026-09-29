@@ -18,13 +18,19 @@ conditions de livraison. Distingue le sous-total des articles, les frais et le t
 Pour plusieurs exemplaires, calcule quantité × prix unitaire documenté, sans
 inventer de remise. L'absence d'un tarif de lot n'empêche pas ce calcul.
 Utilise l'historique pour comprendre les références comme « deux exemplaires ».
-Tu peux uniquement lister et lire les documents. Tu ne peux ni commander ni écrire.
+Pour une image PNG ou JPEG, utilise analyser_image avec une question précise.
+Cite sa source et signale les éléments illisibles sans les inventer.
+Tu peux uniquement lister, lire et analyser les documents. Tu ne peux ni commander ni écrire.
 Quand tu as les informations nécessaires, réponds sans appeler d'outil.
 """
 OUTILS = [
+    {"type": "function", "function": {"name": "analyser_image",
+     "description": "Consulte une image PNG/JPEG du dossier documents avec un modèle visuel. Retourne une interprétation qui peut comporter des erreurs.",
+     "parameters": {"type": "object", "properties": {"nom": {"type": "string"}, "question": {"type": "string"}},
+                    "required": ["nom", "question"], "additionalProperties": False}}},
     {"type": "function", "function": {
         "name": "lister_documents",
-        "description": "Liste les noms des documents texte disponibles dans la boutique fictive.",
+        "description": "Liste les noms des documents texte et images disponibles dans la boutique fictive.",
         "parameters": {"type": "object", "properties": {}, "additionalProperties": False},
     }},
     {"type": "function", "function": {
@@ -37,7 +43,7 @@ OUTILS = [
 ]
 
 
-def executer_outil(nom, arguments, dossier):
+def executer_outil(nom, arguments, dossier, modele_vision="qwen2.5vl:3b"):
     """Le programme contrôle les droits ; le modèle ne fait que proposer."""
     try:
         if not isinstance(arguments, dict):
@@ -46,11 +52,17 @@ def executer_outil(nom, arguments, dossier):
         if nom == "lister_documents":
             if arguments:
                 raise ValueError("Cet outil ne prend aucun paramètre.")
-            fichiers = sorted(p.name for p in racine.glob("*.txt")
-                              if p.is_file() and p.resolve().parent == racine)
+            fichiers = sorted(p.name for p in racine.iterdir()
+                              if p.is_file() and p.resolve().parent == racine
+                              and p.suffix.lower() in {".txt", ".png", ".jpg", ".jpeg"})
             if len(fichiers) > 50:
                 raise ValueError("Dossier trop grand pour cette démonstration (50 fichiers maximum).")
             return {"documents": fichiers}
+        if nom == "analyser_image":
+            if set(arguments) != {"nom", "question"}:
+                raise ValueError("Paramètres attendus : nom et question.")
+            from vision import analyser_image
+            return analyser_image(racine, arguments["nom"], arguments["question"], modele_vision)
         if nom == "lire_document":
             if set(arguments) != {"nom"} or not isinstance(arguments["nom"], str):
                 raise ValueError("Un seul paramètre texte est attendu : nom.")

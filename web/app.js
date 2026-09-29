@@ -27,6 +27,7 @@ function richText(target, text) {
 }
 function actionLabel(event) {
   if(event.nom==='lister_documents')return 'Liste des documents';
+  if(event.nom==='analyser_image')return 'Analyse visuelle de '+(event.arguments?.nom || 'image');
   if(event.nom==='lire_document')return 'Lecture de '+(event.arguments?.nom || 'document');
   return event.nom || 'Action';
 }
@@ -53,6 +54,7 @@ function render(data) {
       let label=actionLabel(e)+(error?' — '+error:' — terminé');
       if(e.resultat?.documents)label+=' ('+e.resultat.documents.length+' disponibles)';
       node.list.append(el('li','',label));
+      if(e.resultat?.analyse){const detail=el('details');detail.append(el('summary','','Observation du VLM'),el('p','',e.resultat.analyse));node.list.lastChild.append(detail);}
     });
     const generated=events.filter(e=>e.type==='diagnostic_modele').reduce((n,e)=>n+(e.eval_count||0),0);
     node.summary.textContent=`${tools.length} action${tools.length>1?'s':''} consultable${tools.length>1?'s':''}`;
@@ -96,16 +98,16 @@ $('composer').addEventListener('submit',async event=>{
 async function boot(){
   try {
     const config=await api('/api/bootstrap');token=config.token;
-    $('modele').textContent=config.modele+' · Ollama';
+    $('modele').textContent=config.modele+' · Vision : '+config.modele_vision;
     $('connexion').textContent=config.etat.ok?'Ollama disponible':'Ollama indisponible';
     $('connexion').classList.toggle('ready',config.etat.ok);
     $('documents').replaceChildren(...config.documents.map(name=>el('li','',name)));
     ready=true;
-    if(!config.etat.ok)alerte(config.etat.message);
+    if(!config.etat.ok || config.etat.vision_absente)alerte(config.etat.message);
     const id=sessionStorage.getItem(storageKey);
     if(id){try{render(await api('/api/session/'+id));}catch{await nouvelle();}}
     else await nouvelle();
-    if(!config.etat.ok)alerte(config.etat.message);
+    if(!config.etat.ok || config.etat.vision_absente)alerte(config.etat.message);
     if(busy)refresh();else $('question').focus();
   }catch(error){ready=false;controls();alerte('Impossible de joindre le chat local. '+error.message);}
 }

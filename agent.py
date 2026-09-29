@@ -75,7 +75,7 @@ def modele_ollama(messages, modele, max_tokens=8192):
 
 
 def lancer(decider, question, dossier, limite=10, pause=False,
-           historique=None, on_event=None, bavard=True):
+           historique=None, on_event=None, bavard=True, modele_vision="qwen2.5vl:3b"):
     """Boucle commune aux deux modes : modèle → outils → observations."""
     messages = [{"role": "system", "content": MISSION}]
     messages.extend(dict(m) for m in (historique or []))
@@ -130,7 +130,7 @@ def lancer(decider, question, dossier, limite=10, pause=False,
                 signaler({"type": "outil_demande", "tour": etape, "nom": nom, "arguments": arguments})
                 if pause:
                     input("Entrée pour exécuter et voir le résultat… ")
-                resultat = executer_outil(nom, arguments, dossier)
+                resultat = executer_outil(nom, arguments, dossier, modele_vision=modele_vision)
                 afficher("Observation :", json.dumps(resultat, ensure_ascii=False, indent=2))
                 noter("outil", tour=etape, nom=nom, arguments=arguments, resultat=resultat)
                 messages.append({"role": "tool", "tool_name": nom,
@@ -153,6 +153,7 @@ def main():
     parser.add_argument("--max-tours", type=int, choices=range(1, 21), default=10, metavar="1..20")
     parser.add_argument("--max-tokens", type=int, choices=range(256, 16385), default=8192,
                         metavar="256..16384", help="Budget par génération, réflexion comprise (défaut : 8192)")
+    parser.add_argument("--vision-model", default="qwen2.5vl:3b", help="Modèle Ollama pour les images")
     args = parser.parse_args()
     if args.mode == "demo" and args.question != QUESTION:
         parser.error("La simulation couvre uniquement la question prédéfinie. Utiliser --mode ollama pour une autre question.")
@@ -165,7 +166,7 @@ def main():
     print("Objectif :", args.question)
     decider = (lambda m: modele_simule(m, args.demo_erreur)) if args.mode == "demo" else (
         lambda m: modele_ollama(m, args.model, args.max_tokens))
-    trace = lancer(decider, args.question, BASE / "documents", args.max_tours, args.pas_a_pas)
+    trace = lancer(decider, args.question, BASE / "documents", args.max_tours, args.pas_a_pas, modele_vision=args.vision_model)
     journaux = BASE / "journaux"
     journaux.mkdir(exist_ok=True)
     chemin = journaux / (datetime.now().strftime("%Y%m%d-%H%M%S-%f") + ".json")
